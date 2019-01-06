@@ -46,6 +46,7 @@ function Base.show(io::IO, link::Link)
     println(io, "  Position:    " * string(get_file_pos(link), base = 16))
 end
 
+# TODO: make this zero based!
 """
     Chain
 
