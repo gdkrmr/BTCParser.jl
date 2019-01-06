@@ -71,4 +71,5 @@ chain = make_chain(chain)
 - Testing requires a working copy of the Bitcoin blockchain (200GB) and therefore
   testing on travis is difficult.
 - Grep the code for "TODO" for more stuff.
-- Report any issues or improvements [here](https://github.com/gdkrmr/BTCParser.jl/issues).
+- Please report any issues or improvement proposals
+  [here](https://github.com/gdkrmr/BTCParser.jl/issues).
