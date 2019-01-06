@@ -61,3 +61,14 @@ Update an existing chain (in case the bitcoin client is running in the backgroun
 ```julia
 chain = make_chain(chain)
 ```
+
+## Problems
+
+- Currently only tested on `amd64` architectures under Linux
+  - many of the internals are endian-dependent and may not work on other
+    architectures.
+  - Paths are different under Windows/MacOS.
+- Testing requires a working copy of the Bitcoin blockchain (200GB) and therefore
+  testing on travis is difficult.
+- Grep the code for "TODO" for more stuff.
+- Report any issues or improvements [here](https://github.com/gdkrmr/BTCParser.jl/issues).
