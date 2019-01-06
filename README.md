@@ -5,9 +5,9 @@
 
 ## About
 
-A pure Julia implementation of a [Bitcoin](https://bitcoincore.org/) Blockchain
+A pure Julia implementation of a [Bitcoin](https://bitcoincore.org/) blockchain
 parser. Before using it you must install a bitcoin client and download the
-Blockchain.
+blockchain.
 
 Bitcoin core should save the blockchain data into `$HOME/.bitcoin/blocks`,
 `BTCParser.jl` will look there by default. You can change this directory by
