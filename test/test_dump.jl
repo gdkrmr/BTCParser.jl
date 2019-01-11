@@ -3,7 +3,7 @@
     n = 1000
     chain = make_chain(n)
 
-    for i in 1:n
+    for i in eachindex(chain)
         b1 = chain[i] |> Block |> BTCParser.dump_block_data
         b2 = chain[i] |> BTCParser.dump_block_data
         @test b1 == b2

@@ -56,10 +56,65 @@ end
 chain = make_chain()
 ```
 """
-const Chain = Array{Link, 1}
+struct Chain
+    data::Vector{Link}
+end
+Chain() = Chain(Link[])
+
+to_index(i::Integer) = i + 1
+from_index(i::Integer) = i - 1
+
+to_index(i::AbstractUnitRange) = to_index(first(i)):to_index(last(i))
+from_index(i::AbstractUnitRange) = from_index(first(i)):from_index(last(i))
+
+
+Base.push!(x::Chain, l::Link) = push!(x.data, l)
+Base.deleteat!(x::Chain, i::Integer) = deleteat!(x.data, to_index(i))
+
+Base.length(x::Chain) = length(x.data)
+Base.firstindex(x::Chain) = 0
+Base.lastindex(x::Chain) = from_index(lastindex(x.data))
+Base.eachindex(x::Chain) = from_index(eachindex(x.data))
+
+Base.checkbounds(::Type{Bool}, x::Chain, i::Integer) =
+    checkbounds(Bool, x.data, to_index(i))
+function Base.checkbounds(x::Chain, i::Integer)
+    if checkbounds(Bool, x.data, to_index(i))
+        return nothing
+    else
+        throw(BoundsError(x, i))
+    end
+end
+
+Base.checkbounds(::Type{Bool}, x::Chain, i::UnitRange) =
+    checkbounds(Bool, x.data, to_index(first(i))) &&
+    checkbounds(Bool, x.data, to_index(last(i)))
+
+function Base.checkbounds(x::Chain, i::UnitRange)
+    if checkbounds(Bool, x, i)
+        return nothing
+    else
+        throw(BoundsError(x, i))
+    end
+end
+
+Base.first(x::Chain) = first(x.data)
+Base.last(x::Chain) = last(x.data)
+
+@inline function Base.getindex(x::Chain, i::Integer)
+    @boundscheck checkbounds(x, i)
+    x.data[to_index(i)]
+end
+
+@inline function Base.getindex(x::Chain, i::UnitRange)
+    @boundscheck checkbounds(x, i)
+    x.data[to_index(i)]
+end
+
+Base.getindex(x::Chain) = x
 
 function Base.show(io::IO, chain::Chain)
-    println(io, "Chain length " * string(length(chain), base = 10))
+    print(io, "Chain length ", string(length(chain), base = 10))
 end
 
 # function Base.showall(io::IO, chain::Chain)
@@ -141,10 +196,10 @@ function link_and_prev_hash(bcio::BCIterator)
 end
 
 function check_out_of_order_blocks!(
-    chain,
-    out_of_order_blocks,
-    out_of_order_prev_hashes
-)
+        chain,
+        out_of_order_blocks,
+        out_of_order_prev_hashes
+    )
     # TODO: optimize this using a linked list? or a Dict or other kind of hash
     # table
 
@@ -153,12 +208,13 @@ function check_out_of_order_blocks!(
     @label start
     for l in eachindex(out_of_order_blocks)
 
-        if out_of_order_prev_hashes[l] == chain[end].hash
+        # out_of_order_prev_hashes is 1-based, chain is 0-based
+        if out_of_order_prev_hashes[l + 1] == chain[end].hash
 
             push!(chain, out_of_order_blocks[l])
 
             deleteat!(out_of_order_blocks, l)
-            deleteat!(out_of_order_prev_hashes, l)
+            deleteat!(out_of_order_prev_hashes, l + 1)
 
             @goto start
         end
