@@ -14,7 +14,7 @@
 The elements of the chain, only for internal representation.
 
 ```
-link = chain[1]
+link = chain[0]
 Block(link)
 Header(link)
 double_sha256(link)

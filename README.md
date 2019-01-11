@@ -26,19 +26,18 @@ chain = make_chain()
 
 Extract the Genesis Block
 ```julia
-genesis_block = Block(chain[1])
+genesis_block = Block(chain[0])
 ```
 
 Extract Block at height `h`
 ```julia
 block = Block(chain[h])
 ```
-Mind that Julia arrays are 1-based, while the bitcoin blockchain is 0-based.
 
 Get the hash of a block
 ```julia
 double_sha256(genesis_block)
-double_sha256(chain[1])
+double_sha256(chain[0])
 ```
 
 Get the header of a block
