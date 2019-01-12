@@ -33,6 +33,8 @@ Extract Block at height `h`
 ```julia
 block = Block(chain[h])
 ```
+chain indexing is 0-based to match the commonly used numbering, if you require
+1-based indexing, use `chain.data[h]`.
 
 Get the hash of a block
 ```julia
