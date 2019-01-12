@@ -206,15 +206,14 @@ function check_out_of_order_blocks!(
     @assert length(out_of_order_blocks) == length(out_of_order_prev_hashes)
 
     @label start
-    for l in eachindex(out_of_order_blocks)
+    for l in eachindex(out_of_order_blocks.data)
 
-        # out_of_order_prev_hashes is 1-based, chain is 0-based
-        if out_of_order_prev_hashes[l + 1] == chain[end].hash
+        if out_of_order_prev_hashes[l] == chain.data[end].hash
 
-            push!(chain, out_of_order_blocks[l])
+            push!(chain, out_of_order_blocks.data[l])
 
-            deleteat!(out_of_order_blocks, l)
-            deleteat!(out_of_order_prev_hashes, l + 1)
+            deleteat!(out_of_order_blocks.data, l)
+            deleteat!(out_of_order_prev_hashes, l)
 
             @goto start
         end
