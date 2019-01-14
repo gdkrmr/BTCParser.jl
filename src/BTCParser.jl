@@ -3,7 +3,6 @@ module BTCParser
 import SHA
 import SHA: sha256
 import Ripemd: ripemd160
-import Base58: base58decode, base58encode, base58checkdecode, base58checkencode
 using Printf
 
 export
@@ -31,7 +30,6 @@ const MAGIC = 0xd9b4_bef9
 const MAGIC_SIZE = sizeof(eltype(MAGIC))
 
 include("lib/errors.jl")
-include("lib/base58.jl")
 include("lib/uint256.jl")
 include("lib/conversions.jl")
 include("lib/file_ops.jl")
