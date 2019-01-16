@@ -103,17 +103,20 @@ Base.last(x::Chain) = last(x.data)
 
 @inline function Base.getindex(x::Chain, i::Integer)
     @boundscheck checkbounds(x, i)
+    # TODO: @inbounds here?
     x.data[to_index(i)]
 end
 
 @inline function Base.getindex(x::Chain, i::UnitRange)
     @boundscheck checkbounds(x, i)
-    x.data[to_index(i)]
+    # TODO: @inbounds here?
+    Chain(x.data[to_index(i)])
 end
 
 Base.getindex(x::Chain) = x
 
 function Base.show(io::IO, chain::Chain)
+    # TODO: this prints a newline at the end...
     print(io, "Chain length ", string(length(chain), base = 10))
 end
 

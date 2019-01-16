@@ -38,6 +38,7 @@
     @test first(chain) == chain[0]
     @test last(chain) == chain[end]
 
-    @test chain[0:4] == chain.data[1:5]
+    @test chain[0:4] isa BTCParser.Chain
+    @test chain[0:4].data == chain.data[1:5]
     @test_throws BoundsError chain[1000:1001]
 end
