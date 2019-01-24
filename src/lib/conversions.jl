@@ -42,17 +42,19 @@ function to_unsigned(x::NTuple{32, UInt8})
 end
 
 # TODO: figure out a no-op way to do this
-function to_byte_tuple(x::UInt256)
+function to_byte_tuple(x::T) where T <: Union{UInt256, UInt128}
     x |>
-        Ref |> x -> Base.unsafe_convert(Ptr{UInt256}, x) |>
-        x -> convert(Ptr{NTuple{32, UInt8}}, x) |>
+        Ref |>
+        x -> Base.unsafe_convert(Ptr{T}, x) |>
+        x -> convert(Ptr{NTuple{sizeof(T), UInt8}}, x) |>
         x -> unsafe_load(x)
 end
 
 # TODO: Little endian only
 # TODO: figure out a no-op way to do this
+# NOTE: This is really slow for UInt128
 """
-    BTCParser.to_byte_tuple(x::Unsigned)NTuple{N, UInt8}
+    BTCParser.to_byte_tuple(x::Unsigned)::NTuple{N, UInt8}
 
 Convert an `Unsigned` (`UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`,
 `UInt256`) into an `NTuple{N, UInt8}` with the identical order of bits.
