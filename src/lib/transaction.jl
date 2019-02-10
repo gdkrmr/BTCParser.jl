@@ -463,9 +463,7 @@ function Transaction(fp::FilePointer)
     fp.file_number |>
         get_block_chain_file_path |>
         x -> open(x) do fh
-
             seek(fh, fp.file_position)
-
             Transaction(fh)
         end
 end

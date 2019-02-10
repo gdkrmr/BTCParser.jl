@@ -103,3 +103,13 @@ function double_sha256(x::Header)::UInt256
     x.data |> sha256 |> sha256 |>
         x -> reinterpret(UInt256, x)[1]
 end
+
+
+function Header(fp::FilePointer)
+    fp.file_number |>
+        BTCParser.get_block_chain_file_path |>
+        x -> open(x) do fh
+            seek(fh, fp.file_position)
+            Header(fh)
+        end
+end
