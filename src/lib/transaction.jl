@@ -471,3 +471,5 @@ function Transaction(fp::FilePointer)
 end
 
 total_output(tx::Transaction) = sum(x -> x.amount, tx.outputs)
+
+is_coinbase(txin::TransactionInput) = txin.hash == zero(UInt256)
