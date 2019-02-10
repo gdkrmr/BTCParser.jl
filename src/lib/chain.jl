@@ -61,6 +61,8 @@ struct Chain
 end
 Chain() = Chain(Link[])
 
+Base.copy(x::Chain) = Chain(copy(x.data))
+
 to_index(i::Integer) = i + 1
 from_index(i::Integer) = i - 1
 
@@ -199,9 +201,9 @@ function link_and_prev_hash(bcio::BCIterator)
 end
 
 function check_out_of_order_blocks!(
-        chain,
-        out_of_order_blocks,
-        out_of_order_prev_hashes
+        chain::Chain,
+        out_of_order_blocks::Vector{Link},
+        out_of_order_prev_hashes::Vector{UInt256}
     )
     # TODO: optimize this using a linked list? or a Dict or other kind of hash
     # table
@@ -209,17 +211,18 @@ function check_out_of_order_blocks!(
     @assert length(out_of_order_blocks) == length(out_of_order_prev_hashes)
 
     @label start
-    for l in eachindex(out_of_order_blocks.data)
+    for l in eachindex(out_of_order_blocks)
 
         if out_of_order_prev_hashes[l] == chain.data[end].hash
 
-            push!(chain, out_of_order_blocks.data[l])
+            push!(chain, out_of_order_blocks[l])
 
-            deleteat!(out_of_order_blocks.data, l)
+            deleteat!(out_of_order_blocks, l)
             deleteat!(out_of_order_prev_hashes, l)
 
             @goto start
         end
+
     end
 
     return nothing
@@ -240,26 +243,69 @@ Read a chain of `height` or the entire bockchain, if `height` is not specified.
 If `chain` is supplied, update the given chain.
 """
 function make_chain(
-    chain                   :: Chain,
-    height                  :: Integer,
-    # This is hardcoded in the bitcoin reference client:
-    max_out_of_order_blocks :: Integer = 1024
-)
+        chain                   :: Chain,
+        height                  :: Integer,
+        # This is hardcoded in the bitcoin reference client:
+        max_out_of_order_blocks :: Integer = 1024
+    )
 
     if length(chain) <= max_out_of_order_blocks
+        # just start from scratch to simplify things
         bcio = BCIterator()::BCIterator
         chain = Chain()
+
+        link, prev_block_hash = link_and_prev_hash(bcio)
+        push!(chain, link)
+
+        out_of_order_blocks = Link[]
+        out_of_order_prev_hashes = UInt256[]
+
     else
+        # turn back the iterator to account for out of order blocks.
         bcio = BCIterator(chain[end - max_out_of_order_blocks + 1])::BCIterator
-        chain = chain[1:(end - max_out_of_order_blocks)]
+        # chain = chain[0:(end - max_out_of_order_blocks)]
+        chain = copy(chain)
+
+        # collect all of the possible out of order blocks and add them to
+        # `chain`
+        out_of_order_blocks = Link[]
+        out_of_order_prev_hashes = UInt256[]
+        # TODO: This has to be changed for a while position(bcio.io) < position(BCIterator(chain[end]).io)
+        # Plan: 1) add comparison for BCIterator. 2) implement this here.
+        for i in 1:max_out_of_order_blocks
+            link, prev_block_hash = link_and_prev_hash(bcio)
+
+            if !any(j -> chain[j].hash == link.hash,
+                    (length(chain) - max_out_of_order_blocks):(length(chain) - 1))
+                push!(out_of_order_blocks, link)
+                push!(out_of_order_prev_hashes, prev_block_hash)
+            end
+
+            # for j in (length(chain) - max_out_of_order_blocks):(length(chain) - 1)
+            #     if link.hash == chain[j].hash
+            #         @goto skip
+            #     end
+            # end
+
+            # # we should only get here if the link is not yet in the chain
+            # push!(out_of_order_blocks, link)
+            # push!(out_of_order_prev_hashes, prev_block_hash)
+
+            # @label skip
+            @show i bcio.io.name position(bcio.io)
+            if i == max_out_of_order_blocks - 1
+                test_bcio = chain[end] |> BCIterator
+                @show bcio.io.name test_bcio.io.name
+                @show position(test_bcio.io) position(bcio.io)
+                @assert bcio.io.name == test_bcio.io.name
+                @assert position(test_bcio.io) == position(bcio.io)
+                close(test_bcio)
+            end
+        end
+
     end
 
-    out_of_order_blocks = Chain()
-    out_of_order_prev_hashes = UInt256[]
 
-    link, prev_block_hash = link_and_prev_hash(bcio)
-
-    push!(chain, link)
 
     # TODO: if height is larger the actual chain length, this will run forever
     while length(chain) < height
@@ -268,11 +314,15 @@ function make_chain(
         try
             link, prev_block_hash = link_and_prev_hash(bcio)
         catch e
+            close(bcio)
             if typeof(e) == NoMoreFilesError
+                @show e
                 return chain
             elseif typeof(e) == EOFError
+                @show e
                 return chain
             elseif typeof(e) == MagicBytesError
+                @show e
                 # block file are padded with zeros
                 if e.bytes == zero(UInt32)
                     # return chain
@@ -294,15 +344,13 @@ function make_chain(
         else
             push!(out_of_order_blocks, link)
             push!(out_of_order_prev_hashes, prev_block_hash)
-            check_out_of_order_blocks!(
-                chain,
-                out_of_order_blocks,
-                out_of_order_prev_hashes
-            )
+            check_out_of_order_blocks!(chain, out_of_order_blocks,
+                                       out_of_order_prev_hashes)
         end
 
     end
 
+    close(bcio)
     return chain
 end
 
