@@ -54,6 +54,26 @@ function get_file_pos(x::BCIterator)
     position(x.io)
 end
 
+function Base.:<(x::BCIterator, y::BCIterator)
+    (get_file_num(x) <= get_file_num(y)) &&
+        (get_file_pos(x) < get_file_pos(y))
+end
+Base.:>(x::BCIterator, y::BCIterator) = y < x
+function Base.:<=(x::BCIterator, y::BCIterator)
+    (get_file_num(x) <= get_file_num(y)) &&
+        (get_file_pos(x) <= get_file_pos(y))
+end
+Base.:>=(x::BCIterator, y::BCIterator) = y <= x
+function Base.:!=(x::BCIterator, y::BCIterator)
+    (get_file_num(x) != get_file_num(y)) ||
+        (get_file_pos(x) != get_file_pos(y))
+end
+function Base.:(==)(x::BCIterator, y::BCIterator)
+    (get_file_num(x) == get_file_num(y)) &&
+        (get_file_pos(x) == get_file_pos(y))
+end
+
+
 Base.close(x::BCIterator)      = close(x.io)
 Base.read(x::BCIterator, T)    = read(x.io, T)
 Base.read(x::BCIterator, T, n) = read(x.io, T, n)
