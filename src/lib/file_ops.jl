@@ -31,7 +31,7 @@ Base.getindex(x::BCIterator, ::Type{Val{:file_path}}) = x.io.name[7:end-1]
 Base.getindex(x::BCIterator, ::Type{Val{:file_index}}) = x.io.name[7:end-1]
 
 function is_last_file(x::BCIterator)
-    get_num_block_chain_files() == get_file_num(x) - 1
+    get_num_block_chain_files() - 1 == get_file_num(x)
 end
 
 function open_next_file(x::BCIterator)
