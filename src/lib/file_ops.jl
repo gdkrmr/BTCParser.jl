@@ -3,6 +3,9 @@
 # chain on the hard drive.
 
 # an iterator/stream chimera
+
+# TODO: add fields for the current file and(? maybe not and) position in the
+# file for faster comparison
 mutable struct BCIterator
     io::IOStream
 end
