@@ -28,7 +28,7 @@ end
 
 Link() = Link(zero(UInt256), typemax(UInt64), typemax(UInt64))
 
-double_sha256(link::Link)     = link.hash
+double_sha256(link::Link) = link.hash
 get_file_pos(link::Link) = link.file_position
 get_file_num(link::Link) = link.file_number
 
@@ -69,6 +69,7 @@ from_index(i::Integer) = i - 1
 to_index(i::AbstractUnitRange) = to_index(first(i)):to_index(last(i))
 from_index(i::AbstractUnitRange) = from_index(first(i)):from_index(last(i))
 
+Base.eltype(x::Chain) = Link
 
 Base.push!(x::Chain, l::Link) = push!(x.data, l)
 Base.deleteat!(x::Chain, i::Integer) = deleteat!(x.data, to_index(i))
@@ -233,6 +234,44 @@ function BCIterator(x::Link)
     BCIterator(seek(bcio, get_file_pos(x)))
 end
 
+function init_make_chain_long(chain::Chain, max_out_of_order_blocks::Int64)
+
+    _chain = copy(chain)
+    bcio = BCIterator(_chain[end - max_out_of_order_blocks + 1])
+    out_of_order_blocks = Link[]
+    out_of_order_prev_hashes = UInt256[]
+
+    # collect all of the possible out of order blocks and add them to
+    # `_chain`
+    bcio_end = _chain[end] |> BCIterator
+    while bcio < bcio_end
+        link, prev_block_hash = link_and_prev_hash(bcio)
+
+        if !any(j -> _chain[j].hash == link.hash,
+                (length(_chain) - max_out_of_order_blocks):(length(_chain) - 1))
+            push!(out_of_order_blocks, link)
+            push!(out_of_order_prev_hashes, prev_block_hash)
+        end
+
+    end
+    @assert bcio == bcio_end
+    close(bcio_end)
+
+    return _chain, bcio, out_of_order_blocks, out_of_order_prev_hashes
+end
+
+function init_make_chain_short()
+    _chain = Chain()
+    bcio = BCIterator()
+    out_of_order_blocks = Link[]
+    out_of_order_prev_hashes = UInt256[]
+
+    link, prev_block_hash = link_and_prev_hash(bcio)
+    push!(_chain, link)
+
+    return _chain, bcio, out_of_order_blocks, out_of_order_prev_hashes
+end
+
 """
     make_chain(chain::Chain, height::Integer)::Chain
     make_chain(chain::Chain)::Chain
@@ -244,72 +283,23 @@ If `chain` is supplied, update the given chain.
 """
 function make_chain(
         chain                   :: Chain,
-        height                  :: Integer,
+        height                  :: Int64,
         # This is hardcoded in the bitcoin reference client:
-        max_out_of_order_blocks :: Integer = 1024
+        max_out_of_order_blocks :: Int64 = 1024
     )
 
     if length(chain) <= max_out_of_order_blocks
-        # just start from scratch to simplify things
-        bcio = BCIterator()::BCIterator
-        chain = Chain()
-
-        link, prev_block_hash = link_and_prev_hash(bcio)
-        push!(chain, link)
-
-        out_of_order_blocks = Link[]
-        out_of_order_prev_hashes = UInt256[]
-
+        _chain, bcio, out_of_order_blocks, out_of_order_prev_hashes =
+            init_make_chain_short()
     else
-        # turn back the iterator to account for out of order blocks.
-        bcio = BCIterator(chain[end - max_out_of_order_blocks + 1])::BCIterator
-        # chain = chain[0:(end - max_out_of_order_blocks)]
-        chain = copy(chain)
-
-        # collect all of the possible out of order blocks and add them to
-        # `chain`
-        out_of_order_blocks = Link[]
-        out_of_order_prev_hashes = UInt256[]
-        # TODO: This has to be changed for a while position(bcio.io) < position(BCIterator(chain[end]).io)
-        # Plan: 1) add comparison for BCIterator. 2) implement this here.
-        for i in 1:max_out_of_order_blocks
-            link, prev_block_hash = link_and_prev_hash(bcio)
-
-            if !any(j -> chain[j].hash == link.hash,
-                    (length(chain) - max_out_of_order_blocks):(length(chain) - 1))
-                push!(out_of_order_blocks, link)
-                push!(out_of_order_prev_hashes, prev_block_hash)
-            end
-
-            # for j in (length(chain) - max_out_of_order_blocks):(length(chain) - 1)
-            #     if link.hash == chain[j].hash
-            #         @goto skip
-            #     end
-            # end
-
-            # # we should only get here if the link is not yet in the chain
-            # push!(out_of_order_blocks, link)
-            # push!(out_of_order_prev_hashes, prev_block_hash)
-
-            # @label skip
-            @show i bcio.io.name position(bcio.io)
-            if i == max_out_of_order_blocks - 1
-                test_bcio = chain[end] |> BCIterator
-                @show bcio.io.name test_bcio.io.name
-                @show position(test_bcio.io) position(bcio.io)
-                @assert bcio.io.name == test_bcio.io.name
-                @assert position(test_bcio.io) == position(bcio.io)
-                close(test_bcio)
-            end
-        end
-
+        _chain, bcio, out_of_order_blocks, out_of_order_prev_hashes =
+            init_make_chain_long(chain, max_out_of_order_blocks)
     end
 
 
-
-    # TODO: if height is larger the actual chain length, this will run forever
-    while length(chain) < height
-
+    # TODO: if height is larger the actual _chain length, this will run forever
+    while length(_chain) < height
+        local link, prev_block_hash
         # TODO: don't use errors for programming logic
         try
             link, prev_block_hash = link_and_prev_hash(bcio)
@@ -317,74 +307,51 @@ function make_chain(
             close(bcio)
             if typeof(e) == NoMoreFilesError
                 @show e
-                return chain
+                return _chain
             elseif typeof(e) == EOFError
                 @show e
-                return chain
+                return _chain
             elseif typeof(e) == MagicBytesError
                 @show e
                 # block file are padded with zeros
                 if e.bytes == zero(UInt32)
-                    # return chain
-                    @show chain[end]
+                    # return _chain
+                    @show _chain[end]
                     # rethrow(e)
-                    return chain
+                    return _chain
                 else
-                    @show chain[end]
+                    @show _chain[end]
                     rethrow(e)
                 end
             else
-                @show chain[end]
+                @show _chain[end]
                 rethrow(e)
             end
         end
 
-        if chain[end].hash == prev_block_hash
-            push!(chain, link)
+        if _chain[end].hash == prev_block_hash
+            push!(_chain, link)
         else
             push!(out_of_order_blocks, link)
             push!(out_of_order_prev_hashes, prev_block_hash)
-            check_out_of_order_blocks!(chain, out_of_order_blocks,
+            check_out_of_order_blocks!(_chain, out_of_order_blocks,
                                        out_of_order_prev_hashes)
         end
 
     end
 
     close(bcio)
-    return chain
+    return _chain
 end
 
-make_chain()             = make_chain(Chain(), typemax(Int))
-make_chain(n::Int)       = make_chain(Chain(), n)
-make_chain(chain::Chain) = make_chain(chain, typemax(Int))
-
-# TODO: figure out when the chain is complete
-# function make_chain()
-
-#     chain = Chain()
-#     bcio = BCIterator()
-
-#     while (true)
-
-#         file_pos = get_file_pos(bcio)
-#         file_num = get_file_num(bcio)
-#         block = bnet.Block(bcio)
-#         block_hash = hash(block)
-
-#         link = Link(block_hash, file_num, file_pos)
-#         push!(chain, link)
-
-#         # TODO: define break condition when the chain is complete
-#         if()
-#             break
-#         end
+make_chain()             = make_chain(Chain(), typemax(Int64))
+make_chain(n::Int64)     = make_chain(Chain(), n)
+make_chain(chain::Chain) = make_chain(chain, typemax(Int64))
 
 
-#     end
-
-#     return chain
-# end
-
+# TODO: this one probably does not work well at the moment, when I tested it, it
+# was more or less as fast as `make_dict`, I bet the dictionary access can be
+# made faster.
 """
     make_chain_dict
 

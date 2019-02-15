@@ -4,7 +4,7 @@
 
 # an iterator/stream chimera
 mutable struct BCIterator
-    io::IO
+    io::IOStream
 end
 
 # This function does not make sense for i > 0, because we cannot be sure that in
