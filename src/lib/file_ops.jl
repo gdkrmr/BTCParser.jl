@@ -55,13 +55,19 @@ function get_file_pos(x::BCIterator)
 end
 
 function Base.:<(x::BCIterator, y::BCIterator)
-    (get_file_num(x) <= get_file_num(y)) &&
-        (get_file_pos(x) < get_file_pos(y))
+    fn_x, fn_y = get_file_num(x), get_file_num(y)
+
+    (fn_x < fn_y) ||
+        ((fn_x == fn_y) &&
+         get_file_pos(x) < get_file_pos(y))
 end
 Base.:>(x::BCIterator, y::BCIterator) = y < x
 function Base.:<=(x::BCIterator, y::BCIterator)
-    (get_file_num(x) <= get_file_num(y)) &&
-        (get_file_pos(x) <= get_file_pos(y))
+    fn_x, fn_y = get_file_num(x), get_file_num(y)
+
+    (fn_x < fn_y) ||
+        ((fn_x == fn_y) &&
+         get_file_pos(x) <= get_file_pos(y))
 end
 Base.:>=(x::BCIterator, y::BCIterator) = y <= x
 function Base.:!=(x::BCIterator, y::BCIterator)
