@@ -7,7 +7,7 @@
     block2 = Block(bcio)
 
     hash1a = double_sha256(block1.header)
-    hash1b = block2.header[:previous_hash]
+    hash1b = block2.header.previous_hash
 
     @test hash1a == hash1b
 

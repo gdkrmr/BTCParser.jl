@@ -196,7 +196,7 @@ function link_and_prev_hash(bcio::BCIterator)
     header = Header(bcio)
     block_hash = double_sha256(header)
 
-    prev_block_hash = header[Val{:previous_hash}]
+    prev_block_hash = header.previous_hash
 
     Link(block_hash, file_num, file_pos), prev_block_hash
 end
