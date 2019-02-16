@@ -20,18 +20,18 @@ end
 
 BCIterator() = BCIterator(0)
 
-function Base.getindex(x::BCIterator, d::Symbol)
-    if     d == :file_name  x.io.name[end-12:end-1]
-    elseif d == :file_path  x.io.name[7:end-1]
-    elseif d == :file_index get_file_num(x)
-    else                    throw(KeyError(d))
-    end
-end
+# function Base.getindex(x::BCIterator, d::Symbol)
+#     if     d == :file_name  x.io.name[end-12:end-1]
+#     elseif d == :file_path  x.io.name[7:end-1]
+#     elseif d == :file_index get_file_num(x)
+#     else                    throw(KeyError(d))
+#     end
+# end
 
-# TODO: getproperty
-Base.getindex(x::BCIterator, ::Type{Val{:file_name}}) = x.io.name[end-12:end-1]
-Base.getindex(x::BCIterator, ::Type{Val{:file_path}}) = x.io.name[7:end-1]
-Base.getindex(x::BCIterator, ::Type{Val{:file_index}}) = x.io.name[7:end-1]
+# # TODO: getproperty
+# Base.getindex(x::BCIterator, ::Type{Val{:file_name}}) = x.io.name[end-12:end-1]
+# Base.getindex(x::BCIterator, ::Type{Val{:file_path}}) = x.io.name[7:end-1]
+# Base.getindex(x::BCIterator, ::Type{Val{:file_index}}) = x.io.name[7:end-1]
 
 function is_last_file(x::BCIterator)
     get_num_block_chain_files() - 1 == get_file_num(x)
