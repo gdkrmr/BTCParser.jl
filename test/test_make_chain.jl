@@ -1,5 +1,7 @@
 @testset "make_chain" begin
 
+    @inferred make_chain(2)
+
     chain = make_chain(2)
 
     genesis_block = chain[0]
